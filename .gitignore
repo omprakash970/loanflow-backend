@@ -1,0 +1,11 @@
+target/
+*.jar
+*.war
+*.ear
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+*.log
+.env
+application-local.properties
