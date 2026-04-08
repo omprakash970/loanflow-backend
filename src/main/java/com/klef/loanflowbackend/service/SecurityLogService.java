@@ -11,6 +11,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityLogService {
 
+
+
+
     private final SecurityLogRepository securityLogRepository;
 
     public List<SecurityLog> getAll() {
