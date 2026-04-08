@@ -97,6 +97,8 @@ public class AuthController {
         } catch (Exception e) {
             OtpVerificationResponse response = OtpVerificationResponse.builder()
                     .verified(false)
+
+
                     .message("An error occurred during OTP verification")
                     .build();
 
