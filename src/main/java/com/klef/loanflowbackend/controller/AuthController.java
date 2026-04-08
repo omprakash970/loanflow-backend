@@ -99,6 +99,8 @@ public class AuthController {
                     .verified(false)
                     .message("An error occurred during OTP verification")
                     .build();
+
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "OTP verification failed", response));
         }
