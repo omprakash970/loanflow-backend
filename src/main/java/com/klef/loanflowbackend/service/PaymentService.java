@@ -14,12 +14,15 @@ import com.klef.loanflowbackend.repository.LenderRepository;
 import com.klef.loanflowbackend.repository.LoanRepository;
 import com.klef.loanflowbackend.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
@@ -56,39 +59,48 @@ public class PaymentService {
     }
 
     public PaymentDTO createPaymentFromBorrower(PaymentDTO paymentDTO, Long borrowerUserId) {
-        Borrower borrower = borrowerRepository.findByUserId(borrowerUserId)
-                .orElseThrow(() -> new RuntimeException("Borrower not found"));
+        try {
+            log.info("Processing payment from borrower: {} for loan: {}", borrowerUserId, paymentDTO.getLoanId());
 
-        Loan loan = loanRepository.findById(paymentDTO.getLoanId())
-                .orElseThrow(() -> new RuntimeException("Loan not found"));
+            Borrower borrower = borrowerRepository.findByUserId(borrowerUserId)
+                    .orElseThrow(() -> new RuntimeException("Borrower not found"));
 
-        if (!loan.getBorrower().getId().equals(borrower.getId())) {
-            throw new RuntimeException("Unauthorized: Loan does not belong to this borrower");
+            Loan loan = loanRepository.findById(paymentDTO.getLoanId())
+                    .orElseThrow(() -> new RuntimeException("Loan not found"));
+
+            if (!loan.getBorrower().getId().equals(borrower.getId())) {
+                throw new RuntimeException("Unauthorized: Loan does not belong to this borrower");
+            }
+
+            // Get EMI schedule if provided
+            EmiSchedule emi = null;
+            if (paymentDTO.getEmiScheduleId() != null) {
+                emi = emiScheduleRepository.findById(paymentDTO.getEmiScheduleId())
+                        .orElseThrow(() -> new RuntimeException("EMI Schedule not found"));
+                emi.setStatus(PaymentStatus.COMPLETED);
+                emiScheduleRepository.save(emi);
+                log.info("EMI {} updated to COMPLETED", paymentDTO.getEmiScheduleId());
+            }
+
+            // Create payment record
+            Payment payment = Payment.builder()
+                    .paymentId("PAY-" + UUID.randomUUID().toString().substring(0, 8))
+                    .loan(loan)
+                    .emiSchedule(emi)
+                    .amount(paymentDTO.getAmount())
+                    .paymentDate(System.currentTimeMillis())
+                    .method(paymentDTO.getMethod() != null ? PaymentMethod.valueOf(paymentDTO.getMethod().toUpperCase()) : PaymentMethod.MANUAL)
+                    .status(PaymentStatus.COMPLETED)
+                    .build();
+
+            Payment saved = paymentRepository.save(payment);
+            log.info("Payment created successfully: {}", saved.getPaymentId());
+
+            return toDTO(saved);
+        } catch (Exception e) {
+            log.error("Error creating payment from borrower: {}", e.getMessage(), e);
+            throw new RuntimeException("Payment creation failed: " + e.getMessage());
         }
-
-        // Get EMI schedule if provided
-        EmiSchedule emi = null;
-        if (paymentDTO.getEmiScheduleId() != null) {
-            emi = emiScheduleRepository.findById(paymentDTO.getEmiScheduleId())
-                    .orElseThrow(() -> new RuntimeException("EMI Schedule not found"));
-            emi.setStatus(PaymentStatus.COMPLETED);
-            emiScheduleRepository.save(emi);
-        }
-
-        // Create payment record
-        Payment payment = Payment.builder()
-                .paymentId("PAY-" + UUID.randomUUID().toString().substring(0, 8))
-                .loan(loan)
-                .emiSchedule(emi)
-                .amount(paymentDTO.getAmount())
-                .paymentDate(System.currentTimeMillis())
-                .method(paymentDTO.getMethod() != null ? PaymentMethod.valueOf(paymentDTO.getMethod().toUpperCase()) : PaymentMethod.MANUAL)
-                .status(PaymentStatus.COMPLETED)
-                .build();
-
-        Payment saved = paymentRepository.save(payment);
-
-        return toDTO(saved);
     }
 
     public List<PaymentDTO> getAllPayments() {
