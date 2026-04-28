@@ -56,10 +56,6 @@ public class SecurityConfig {
 
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                .headers(headers -> headers
-                        .frameOptions(frame -> frame.disable())
-                        .xssProtection(xss -> xss.disable())
-                )
 
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
