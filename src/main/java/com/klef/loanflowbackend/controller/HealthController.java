@@ -23,6 +23,7 @@ public class HealthController {
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<String>> status() {
         return ResponseEntity.ok(
+
             new ApiResponse<>(true, "Status OK", "Production")
         );
     }
