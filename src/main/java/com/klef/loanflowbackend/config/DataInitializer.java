@@ -3,6 +3,7 @@ package com.klef.loanflowbackend.config;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.klef.loanflowbackend.entity.Borrower;
@@ -18,8 +19,8 @@ import com.klef.loanflowbackend.repository.BorrowerRepository;
 import com.klef.loanflowbackend.repository.EmiScheduleRepository;
 import com.klef.loanflowbackend.repository.LenderRepository;
 import com.klef.loanflowbackend.repository.LoanRepository;
-import com.klef.loanflowbackend.repository.LoanRequestRepository;
 import com.klef.loanflowbackend.repository.LoanOfferRepository;
+import com.klef.loanflowbackend.repository.LoanRequestRepository;
 import com.klef.loanflowbackend.repository.PaymentRepository;
 import com.klef.loanflowbackend.repository.RiskReportRepository;
 import com.klef.loanflowbackend.repository.SecurityLogRepository;
@@ -28,6 +29,7 @@ import com.klef.loanflowbackend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
+@Profile("local")
 @RequiredArgsConstructor
 public class DataInitializer {
 
@@ -47,8 +49,9 @@ public class DataInitializer {
             SecurityLogRepository securityLogRepository) {
 
         return args -> {
-            // Clear all existing sample data
+
             System.out.println("Clearing existing data...");
+
             securityLogRepository.deleteAll();
             riskReportRepository.deleteAll();
             paymentRepository.deleteAll();
@@ -59,25 +62,29 @@ public class DataInitializer {
             lenderRepository.deleteAll();
             borrowerRepository.deleteAll();
             userRepository.deleteAll();
+
             System.out.println("✓ All data cleared");
 
-            // Create admin account
+            // Admin
             User adminUser = User.builder()
                     .fullName("System Admin")
                     .email("admin@loanflow.com")
                     .password(passwordEncoder.encode("admin123"))
                     .role(Role.ADMIN)
                     .build();
+
             userRepository.save(adminUser);
+
             System.out.println("✓ Admin account created: admin@loanflow.com / admin123");
 
-            // Create test borrower
+            // Borrower
             User borrowerUser = User.builder()
                     .fullName("John Doe")
                     .email("borrower@loanflow.com")
                     .password(passwordEncoder.encode("borrower123"))
                     .role(Role.BORROWER)
                     .build();
+
             userRepository.save(borrowerUser);
 
             Borrower borrower = Borrower.builder()
@@ -88,16 +95,19 @@ public class DataInitializer {
                     .riskLevel(RiskLevel.LOW)
                     .createdAt(System.currentTimeMillis())
                     .build();
+
             borrowerRepository.save(borrower);
+
             System.out.println("✓ Test borrower created: borrower@loanflow.com / borrower123");
 
-            // Create test lender
+            // Lender
             User lenderUser = User.builder()
                     .fullName("ABC Bank")
                     .email("lender@loanflow.com")
                     .password(passwordEncoder.encode("lender123"))
                     .role(Role.LENDER)
                     .build();
+
             userRepository.save(lenderUser);
 
             Lender lender = Lender.builder()
@@ -107,10 +117,12 @@ public class DataInitializer {
                     .activeLoans(1)
                     .createdAt(System.currentTimeMillis())
                     .build();
+
             lenderRepository.save(lender);
+
             System.out.println("✓ Test lender created: lender@loanflow.com / lender123");
 
-            // Create an APPROVED loan with EMI schedules
+            // Loan
             Loan loan = Loan.builder()
                     .loanId("LOAN-TEST001")
                     .borrower(borrower)
@@ -124,16 +136,19 @@ public class DataInitializer {
                     .nextPaymentDate(System.currentTimeMillis() + (30L * 24 * 60 * 60 * 1000))
                     .createdAt(System.currentTimeMillis())
                     .build();
+
             loanRepository.save(loan);
+
             System.out.println("✓ Test loan created: LOAN-TEST001");
 
-            // Generate EMI schedules
+            // EMI Schedule
             double principal = loan.getAmount();
             double annualRate = loan.getInterestRate() / 100.0;
             double monthlyRate = annualRate / 12.0;
             int tenure = loan.getTenure();
 
             double emiAmount;
+
             if (monthlyRate == 0) {
                 emiAmount = principal / tenure;
             } else {
@@ -142,20 +157,13 @@ public class DataInitializer {
             }
 
             double remainingBalance = principal;
+
             for (int month = 1; month <= tenure; month++) {
+
                 double interestAmount = remainingBalance * monthlyRate;
                 double principalAmount = emiAmount - interestAmount;
-                remainingBalance -= principalAmount;
 
-                if (month == tenure) {
-                    principalAmount = principal - (emiAmount * (tenure - 1) -
-                        emiScheduleRepository.findByLoanIdOrderByMonthAsc(loan.getId())
-                            .stream()
-                            .mapToDouble(EmiSchedule::getPrincipal)
-                            .sum());
-                    interestAmount = emiAmount - principalAmount;
-                    remainingBalance = 0;
-                }
+                remainingBalance -= principalAmount;
 
                 EmiSchedule schedule = EmiSchedule.builder()
                         .loan(loan)
@@ -170,6 +178,7 @@ public class DataInitializer {
 
                 emiScheduleRepository.save(schedule);
             }
+
             System.out.println("✓ EMI schedules generated: 24 monthly EMIs");
             System.out.println("✓ DataInitializer completed");
         };
