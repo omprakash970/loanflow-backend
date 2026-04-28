@@ -28,15 +28,14 @@ import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
-
-//@EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
 
-    @Value("${cors.allowed.origins:http://localhost:5173,http://localhost:5174}")
+    @Value("${cors.allowed.origins:http://localhost:5173,http://localhost:5174,https://loanflow-frontend.netlify.app}")
     private String allowedOrigins;
 
     @Bean
@@ -57,6 +56,11 @@ public class SecurityConfig {
 
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.disable())
+                        .xssProtection(xss -> xss.disable())
+                )
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
@@ -76,7 +80,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
 
-                        // Everything else needs token
+                        // Everything else needs authentication
                         .anyRequest().authenticated()
                 )
 
@@ -98,7 +102,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
         );
 
         configuration.setAllowedHeaders(
