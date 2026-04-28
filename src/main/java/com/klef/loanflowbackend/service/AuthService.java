@@ -103,22 +103,15 @@ public class AuthService {
      */
     public AuthResponse login(AuthRequest request) {
 
-        // Authenticate user
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
-
-        // Find user by email
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        // Generate JWT token
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Invalid password");
+        }
+
         String token = jwtService.generateToken(user.getEmail());
 
-        // Return auth response
         return AuthResponse.builder()
                 .token(token)
                 .role(user.getRole().name())
