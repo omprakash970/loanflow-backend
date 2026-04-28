@@ -10,6 +10,7 @@ import com.klef.loanflowbackend.repository.UserRepository;
 import com.klef.loanflowbackend.security.JwtService;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
